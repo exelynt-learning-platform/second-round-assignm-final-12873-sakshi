@@ -1,25 +1,32 @@
 package com.ecommerce.security;
 
+import com.ecommerce.security.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.ecommerce.security.CustomUserDetailsService;
 
 import java.io.IOException;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService userDetailsService;
+
+    // ✅ Constructor Injection
+    public JwtFilter(JwtUtil jwtUtil,
+                     CustomUserDetailsService userDetailsService) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -27,29 +34,32 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        System.out.println("JWT FILTER RUNNING...");
+        logger.info("JWT FILTER RUNNING...");
 
         String authHeader = request.getHeader("Authorization");
 
         String token = null;
         String username = null;
 
-        // 👉 Check Bearer token
+        // 👉 Extract token
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
             username = jwtUtil.extractUsername(token);
         }
 
-        // 👉 Validate and set authentication
-        if (username != null) {
-            org.springframework.security.core.userdetails.UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(username);
+        // 👉 Validate token only if not already authenticated
+        if (username != null &&
+                org.springframework.security.core.context.SecurityContextHolder
+                        .getContext().getAuthentication() == null) {
 
-            if (jwtUtil.validateToken(token, userDetails.getUsername())) {
+            var userDetails = userDetailsService.loadUserByUsername(username);
 
-                var authToken = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities()
-                );
+            if (token != null && jwtUtil.validateToken(token, userDetails.getUsername())) {
+
+                var authToken =
+                        new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities()
+                        );
 
                 org.springframework.security.core.context.SecurityContextHolder
                         .getContext()

@@ -38,14 +38,13 @@ public class ProductController {
     // 🔥 ADMIN ONLY
     @PutMapping("/{id}")
     public ProductResponse update(@PathVariable Long id,
-                                  @RequestBody ProductRequest req) {
+                                  @Valid @RequestBody ProductRequest req) { // ✅ FIX
         return service.update(id, req);
     }
 
     // 🔥 ADMIN ONLY
     @DeleteMapping("/{id}")
-    public String delete(@PathVariable Long id) {
+    public void delete(@PathVariable Long id) { // ✅ FIX
         service.delete(id);
-        return "Deleted";
     }
 }

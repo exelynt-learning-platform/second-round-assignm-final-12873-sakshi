@@ -1,11 +1,8 @@
 package com.ecommerce.controller;
 
-import com.ecommerce.entity.Order;
-import com.ecommerce.entity.User;
-import com.ecommerce.entity.Product;
+import com.ecommerce.service.PaymentService;
 import com.ecommerce.repository.OrderRepository;
-import com.ecommerce.repository.UserRepository;
-import com.ecommerce.repository.CartRepository;
+import com.ecommerce.entity.Order;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -13,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Optional;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,13 +18,10 @@ import static org.mockito.Mockito.*;
 class PaymentControllerTest {
 
     @Mock
+    private PaymentService paymentService;
+
+    @Mock
     private OrderRepository orderRepo;
-
-    @Mock
-    private UserRepository userRepo;
-
-    @Mock
-    private CartRepository cartRepo;
 
     @InjectMocks
     private PaymentController paymentController;
@@ -37,97 +30,53 @@ class PaymentControllerTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    // ✅ TEST 1: SUCCESS CASE
+    // ✅ TEST 1: SUCCESS
     @Test
     void testPaymentSuccess() {
 
-        User user = new User();
-        user.setId(1L);
-        user.setAmount(10000);
-
-        Product product = new Product();
-        product.setId(1L);
-        product.setName("Laptop");
-        product.setStockQuantity(5);
-        product.setPrice(5000);
-
         Order order = new Order();
-        order.setUser(user);
-        order.setTotalPrice(5000);
         order.setPaymentStatus("PENDING");
-        order.setProducts(List.of(product));
+        order.setItems(java.util.List.of(new com.ecommerce.entity.OrderItem()));
 
         when(orderRepo.findById(1L)).thenReturn(Optional.of(order));
-        when(userRepo.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentService.processPayment(1L)).thenReturn("SUCCESS");
 
-        // 🔥 FIX: Map instead of String
-        Map<String, String> result = paymentController.paymentSuccess(1L);
+        Map<String, String> result = paymentController.success(1L);
 
         assertEquals("SUCCESS", result.get("status"));
         assertEquals("Payment successful", result.get("message"));
-
-        assertEquals(5000, user.getAmount());
-        assertEquals("SUCCESS", order.getPaymentStatus());
-
-        verify(cartRepo).deleteByUser(user);
     }
 
-    // ❌ TEST 2: INSUFFICIENT BALANCE
+    // ❌ TEST 2: FAILED
     @Test
-    void testPaymentFail_InsufficientBalance() {
-
-        User user = new User();
-        user.setId(1L);
-        user.setAmount(1000);
-
-        Product product = new Product();
-        product.setId(1L);
-        product.setName("Laptop");
-        product.setStockQuantity(5);
-        product.setPrice(5000);
+    void testPaymentFail() {
 
         Order order = new Order();
-        order.setUser(user);
-        order.setTotalPrice(5000);
         order.setPaymentStatus("PENDING");
-        order.setProducts(List.of(product));
+        order.setItems(java.util.List.of(new com.ecommerce.entity.OrderItem()));
 
         when(orderRepo.findById(1L)).thenReturn(Optional.of(order));
-        when(userRepo.findById(1L)).thenReturn(Optional.of(user));
+        when(paymentService.processPayment(1L)).thenReturn("FAILED");
 
-        Map<String, String> result = paymentController.paymentSuccess(1L);
+        Map<String, String> result = paymentController.success(1L);
 
         assertEquals("FAILED", result.get("status"));
-        assertEquals("Insufficient balance", result.get("message"));
-
-        assertEquals("FAILED", order.getPaymentStatus());
+        assertEquals("Payment failed", result.get("message"));
     }
 
     // ❌ TEST 3: ALREADY PAID
     @Test
     void testPaymentAlreadyCompleted() {
 
-        User user = new User();
-        user.setId(1L);
-        user.setAmount(10000);
-
-        Product product = new Product();
-        product.setId(1L);
-        product.setName("Laptop");
-        product.setStockQuantity(5);
-        product.setPrice(5000);
-
         Order order = new Order();
-        order.setUser(user);
-        order.setTotalPrice(5000);
         order.setPaymentStatus("SUCCESS");
-        order.setProducts(List.of(product));
+        order.setItems(java.util.List.of(new com.ecommerce.entity.OrderItem()));
 
         when(orderRepo.findById(1L)).thenReturn(Optional.of(order));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> paymentController.paymentSuccess(1L));
+                () -> paymentController.pay(1L));
 
-        assertEquals("Payment already completed", ex.getMessage());
+        assertEquals("Payment already processed", ex.getMessage());
     }
 }

@@ -7,56 +7,75 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-class CartServiceTest {
+class OrderServiceTest {
+
+    @Mock
+    private OrderRepository orderRepo;
 
     @Mock
     private CartRepository cartRepo;
 
     @Mock
-    private ProductRepository productRepo;
-
-    @Mock
     private UserRepository userRepo;
 
-    @InjectMocks
-    private CartService cartService;
+    @Mock
+    private ProductRepository productRepo; // ✅ IMPORTANT
 
-    public CartServiceTest() {
+    @InjectMocks
+    private OrderService orderService;
+
+    public OrderServiceTest() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void testAddToCart() {
+    void testCreateOrder_Success() {
 
         // 👉 Dummy user
         User user = new User();
         user.setUsername("satish");
 
-        // 👉 Dummy product (🔥 FIXED)
+        // 👉 Dummy product
         Product product = new Product();
         product.setId(1L);
-        product.setName("Mobile");        // ✅ IMPORTANT
-        product.setPrice(2000);
-        product.setStockQuantity(10);     // ✅ MUST > 0
+        product.setName("Laptop");
+        product.setPrice(1000);
+        product.setStockQuantity(10);
+
+        // 👉 Cart item
+        Cart cart = new Cart();
+        cart.setUser(user);
+        cart.setProduct(product);
+        cart.setQuantity(2);
+
+        List<Cart> cartList = List.of(cart);
 
         // 👉 Mock DB
         when(userRepo.findByUsername("satish")).thenReturn(Optional.of(user));
-        when(productRepo.findById(1L)).thenReturn(Optional.of(product));
-        when(cartRepo.findByUserAndProduct(user, product)).thenReturn(Optional.empty());
-
-        Cart savedCart = new Cart();
-        when(cartRepo.save(any(Cart.class))).thenReturn(savedCart);
+        when(cartRepo.findByUser(user)).thenReturn(cartList);
+        when(orderRepo.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
 
         // 👉 Call method
-        Cart result = cartService.addToCart("satish", 1L, 2);
+        Order result = orderService.createOrder("satish", "Pune");
 
-        // 👉 Verify
+        // 👉 Assertions (🔥 IMPORTANT)
         assertNotNull(result);
-        verify(cartRepo).save(any(Cart.class));
+        assertEquals("Pune", result.getAddress());
+        assertEquals("PENDING", result.getPaymentStatus());
+        assertEquals(2000, result.getTotalPrice());
+
+        assertEquals(1, result.getItems().size());
+        assertEquals(2, result.getItems().get(0).getQuantity());
+
+        // 👉 Verify interactions
+        verify(orderRepo).save(any(Order.class));
+        verify(cartRepo).deleteAll(cartList);
+        verify(productRepo, atLeastOnce()).save(any(Product.class)); // ✅
     }
 }

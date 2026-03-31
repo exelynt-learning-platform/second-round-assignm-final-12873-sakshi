@@ -1,6 +1,8 @@
 package com.ecommerce.config;
 
 import com.ecommerce.security.JwtFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 @Configuration
 public class SecurityConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
     private final JwtFilter jwtFilter;
 
     public SecurityConfig(JwtFilter jwtFilter) {
@@ -20,7 +24,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        System.out.println("SECURITY CONFIG LOADED");
+        logger.info("SECURITY CONFIG LOADED");
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -36,7 +40,7 @@ public class SecurityConfig {
                         // 🧾 ORDER → ONLY USER
                         .requestMatchers("/api/orders/**").hasRole("USER")
 
-                        // 💳 PAYMENT → ONLY USER  🔥 ADD THIS
+                        // 💳 PAYMENT → ONLY USER
                         .requestMatchers("/api/payment/**").hasRole("USER")
 
                         // 📦 PRODUCTS → READ (USER + ADMIN)

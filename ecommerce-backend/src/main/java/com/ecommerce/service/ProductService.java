@@ -18,8 +18,38 @@ public class ProductService {
         this.repo = repo;
     }
 
+    // 🔥 COMMON VALIDATION
+    private void validate(ProductRequest req) {
+        if (req == null) {
+            throw new IllegalArgumentException("Product request cannot be null");
+        }
+        if (req.getName() == null || req.getName().isBlank()) {
+            throw new IllegalArgumentException("Product name is required");
+        }
+        if (req.getPrice() < 0) {
+            throw new IllegalArgumentException("Price cannot be negative");
+        }
+        if (req.getStockQuantity() < 0) {
+            throw new IllegalArgumentException("Stock cannot be negative");
+        }
+    }
+
+    // 🔥 DTO MAPPER (REMOVES DUPLICATION)
+    private ProductResponse mapToResponse(Product p) {
+        return new ProductResponse(
+                p.getId(),
+                p.getName(),
+                p.getDescription(),
+                p.getPrice(),
+                p.getStockQuantity(),
+                p.getImageUrl()
+        );
+    }
+
     // 🔥 CREATE
     public ProductResponse create(ProductRequest req) {
+
+        validate(req);
 
         Product p = new Product();
         p.setName(req.getName());
@@ -28,30 +58,14 @@ public class ProductService {
         p.setStockQuantity(req.getStockQuantity());
         p.setImageUrl(req.getImageUrl());
 
-        Product saved = repo.save(p);
-
-        return new ProductResponse(
-                saved.getId(),
-                saved.getName(),
-                saved.getDescription(),
-                saved.getPrice(),
-                saved.getStockQuantity(),   // ✅ FIX
-                saved.getImageUrl()         // ✅ FIX
-        );
+        return mapToResponse(repo.save(p));
     }
 
     // 🔥 GET ALL
     public List<ProductResponse> getAll() {
         return repo.findAll()
                 .stream()
-                .map(p -> new ProductResponse(
-                        p.getId(),
-                        p.getName(),
-                        p.getDescription(),
-                        p.getPrice(),
-                        p.getStockQuantity(),   // ✅ FIX
-                        p.getImageUrl()         // ✅ FIX
-                ))
+                .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
@@ -60,18 +74,13 @@ public class ProductService {
         Product p = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        return new ProductResponse(
-                p.getId(),
-                p.getName(),
-                p.getDescription(),
-                p.getPrice(),
-                p.getStockQuantity(),   // ✅ FIX
-                p.getImageUrl()         // ✅ FIX
-        );
+        return mapToResponse(p);
     }
 
     // 🔥 UPDATE
     public ProductResponse update(Long id, ProductRequest req) {
+
+        validate(req);
 
         Product existing = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -82,20 +91,15 @@ public class ProductService {
         existing.setStockQuantity(req.getStockQuantity());
         existing.setImageUrl(req.getImageUrl());
 
-        Product updated = repo.save(existing);
-
-        return new ProductResponse(
-                updated.getId(),
-                updated.getName(),
-                updated.getDescription(),
-                updated.getPrice(),
-                updated.getStockQuantity(),   // ✅ FIX
-                updated.getImageUrl()         // ✅ FIX
-        );
+        return mapToResponse(repo.save(existing));
     }
 
     // 🔥 DELETE
     public void delete(Long id) {
-        repo.deleteById(id);
+
+        Product existing = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        repo.delete(existing);
     }
 }

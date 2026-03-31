@@ -12,9 +12,9 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 🔴 404 - Resource Not Found
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<?> handleNotFound(RuntimeException ex) {
+    // 🔴 404 - Resource Not Found (BEST PRACTICE)
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleNotFound(ResourceNotFoundException ex) {
 
         Map<String, Object> error = new HashMap<>();
         error.put("time", LocalDateTime.now());
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    // 🔴 400 - Validation Error (🔥 NEW IMPORTANT)
+    // 🔴 400 - Validation Error
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
 

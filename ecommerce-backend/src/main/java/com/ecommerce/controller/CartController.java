@@ -23,7 +23,11 @@ public class CartController {
                           @RequestParam int quantity,
                           Authentication auth) {
 
-        String username = auth.getName(); // 🔑 JWT se username
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
+        String username = auth.getName();
         return service.addToCart(username, productId, quantity);
     }
 
@@ -37,16 +41,18 @@ public class CartController {
 
     // 🔥 REMOVE ITEM
     @DeleteMapping("/{id}")
-    public String remove(@PathVariable Long id) {
-
+    public void remove(@PathVariable Long id) { // ✅ FIX
         service.removeItem(id);
-        return "Item removed";
     }
 
     // 🔥 UPDATE QUANTITY
     @PutMapping("/{id}")
     public Cart update(@PathVariable Long id,
                        @RequestParam int quantity) {
+
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
 
         return service.updateQuantity(id, quantity);
     }

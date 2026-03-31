@@ -1,7 +1,11 @@
 package com.ecommerce.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 public class OrderItem {
 
@@ -10,32 +14,24 @@ public class OrderItem {
     private Long id;
 
     // 🔗 Product reference
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
+
+    // 🔗 Order reference (🔥 IMPORTANT FIX)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
 
     // 🔢 Quantity
     private int quantity;
 
-    // ===== GETTERS & SETTERS =====
+    // ✅ DEFAULT CONSTRUCTOR
+    public OrderItem() {}
 
-    public Long getId() {
-        return id;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
+    // ✅ OPTIONAL CONSTRUCTOR
+    public OrderItem(Product product, int quantity) {
         this.product = product;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
         this.quantity = quantity;
     }
 }

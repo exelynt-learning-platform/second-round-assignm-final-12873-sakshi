@@ -1,14 +1,9 @@
 package com.ecommerce.controller;
 
-import com.ecommerce.entity.Order;
-import com.ecommerce.entity.OrderItem;
-import com.ecommerce.entity.Product;
-import com.ecommerce.entity.User;
-import com.ecommerce.repository.CartRepository;
+import com.ecommerce.service.PaymentService;
 import com.ecommerce.repository.OrderRepository;
-import com.ecommerce.repository.UserRepository;
+import com.ecommerce.entity.Order;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -16,32 +11,27 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment")
-@Transactional
 public class PaymentController {
 
+    private final PaymentService paymentService;
     private final OrderRepository orderRepo;
-    private final UserRepository userRepo;
-    private final CartRepository cartRepo;
 
     @Value("${app.base-url}")
     private String baseUrl;
 
-    public PaymentController(OrderRepository orderRepo,
-                             UserRepository userRepo,
-                             CartRepository cartRepo) {
+    public PaymentController(PaymentService paymentService,
+                             OrderRepository orderRepo) {
+        this.paymentService = paymentService;
         this.orderRepo = orderRepo;
-        this.userRepo = userRepo;
-        this.cartRepo = cartRepo;
     }
 
-    // ✅ STEP 1: CREATE PAYMENT
+    // 🔥 STEP 1: CREATE PAYMENT LINK
     @PostMapping("/pay/{orderId}")
     public Map<String, String> pay(@PathVariable Long orderId) {
 
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // ✅ SAFE NULL CHECK
         if (order.getItems() == null || order.getItems().isEmpty()) {
             throw new RuntimeException("Order has no items");
         }
@@ -51,104 +41,29 @@ public class PaymentController {
         }
 
         Map<String, String> response = new HashMap<>();
-
-        response.put("paymentUrl",
-                baseUrl + "/api/payment/success/" + orderId);
-
-        response.put("message", "Redirect user to payment gateway");
-
+        response.put("paymentUrl", baseUrl + "/api/payment/success/" + orderId);
         return response;
     }
 
-    // ✅ STEP 2: PAYMENT SUCCESS
+    // 🔥 STEP 2: SUCCESS
     @PostMapping("/success/{orderId}")
-    public Map<String, String> paymentSuccess(@PathVariable Long orderId) {
+    public Map<String, String> success(@PathVariable Long orderId) {
 
-        Order order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        // ✅ DOUBLE PAYMENT PREVENTION
-        if ("SUCCESS".equals(order.getPaymentStatus())) {
-            throw new RuntimeException("Payment already completed");
-        }
-
-        if (order.getItems() == null || order.getItems().isEmpty()) {
-            throw new RuntimeException("Order has no items");
-        }
-
-        User user = userRepo.findById(order.getUser().getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        double total = order.getTotalPrice();
+        String status = paymentService.processPayment(orderId);
 
         Map<String, String> response = new HashMap<>();
-
-        // 💰 BALANCE CHECK
-        if (user.getAmount() < total) {
-            order.setPaymentStatus("FAILED");
-            orderRepo.save(order);
-
-            response.put("status", "FAILED");
-            response.put("message", "Insufficient balance");
-            return response;
-        }
-
-        // 📦 STOCK VALIDATION + REDUCTION
-        for (OrderItem item : order.getItems()) {
-
-            Product product = item.getProduct();
-
-            if (product == null) {
-                throw new RuntimeException("Invalid product in order");
-            }
-
-            int quantity = item.getQuantity();
-
-            if (quantity <= 0) {
-                throw new RuntimeException("Invalid quantity for " + product.getName());
-            }
-
-            if (product.getStockQuantity() < quantity) {
-                throw new RuntimeException(
-                        "Insufficient stock for " + product.getName());
-            }
-
-            // ✅ FINAL FIX (correct deduction)
-            product.setStockQuantity(
-                    product.getStockQuantity() - quantity
-            );
-        }
-
-        // 💰 Deduct balance
-        user.setAmount(user.getAmount() - total);
-        userRepo.save(user);
-
-        // 📦 Update order
-        order.setPaymentStatus("SUCCESS");
-        orderRepo.save(order);
-
-        // 🛒 Clear cart
-        cartRepo.deleteByUser(user);
-
-        response.put("status", "SUCCESS");
-        response.put("message", "Payment successful");
+        response.put("status", status);
+        response.put("message",
+                "SUCCESS".equals(status) ? "Payment successful" : "Payment failed");
 
         return response;
     }
 
-    // ✅ STEP 3: PAYMENT FAILED
+    // 🔥 STEP 3: FAIL
     @PostMapping("/fail/{orderId}")
-    public Map<String, String> paymentFail(@PathVariable Long orderId) {
+    public Map<String, String> fail(@PathVariable Long orderId) {
 
-        Order order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        if ("SUCCESS".equals(order.getPaymentStatus())) {
-            throw new RuntimeException("Cannot mark successful order as failed");
-        }
-
-        order.setPaymentStatus("FAILED");
-        orderRepo.save(order);
+        paymentService.markFailed(orderId);
 
         Map<String, String> response = new HashMap<>();
         response.put("status", "FAILED");

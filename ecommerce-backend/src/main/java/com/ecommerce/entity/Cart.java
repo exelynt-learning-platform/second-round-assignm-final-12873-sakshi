@@ -9,17 +9,18 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 👤 Which user
+    // 👤 User
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
-    // 📦 Which product
+    // 📦 Product
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
 
     // 🔢 Quantity
+    @Column(nullable = false)
     private int quantity;
 
     // 🔹 Constructors
@@ -32,8 +33,13 @@ public class Cart {
     }
 
     // 🔹 Getters & Setters
+
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {   // ✅ Added
+        this.id = id;
     }
 
     public User getUser() {
@@ -44,7 +50,7 @@ public class Cart {
         this.user = user;
     }
 
-    public Product getProduct() {
+    public Product getProduct() {  // ✅ Correct
         return product;
     }
 

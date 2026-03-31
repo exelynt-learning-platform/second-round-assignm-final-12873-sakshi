@@ -22,6 +22,10 @@ public class OrderController {
     public Order createOrder(@RequestParam String address,
                              Authentication auth) {
 
+        if (address == null || address.isBlank()) {
+            throw new IllegalArgumentException("Address cannot be empty");
+        }
+
         String username = auth.getName();
         return service.createOrder(username, address);
     }
@@ -34,11 +38,5 @@ public class OrderController {
         return service.getUserOrders(username);
     }
 
-    // 🔥 PAYMENT API
-    @PutMapping("/pay/{id}")
-    public Order pay(@PathVariable Long id,
-                     @RequestParam boolean success) {
-
-        return service.makePayment(id, success);
-    }
+    // ❌ REMOVED PAYMENT API (handled in PaymentController)
 }

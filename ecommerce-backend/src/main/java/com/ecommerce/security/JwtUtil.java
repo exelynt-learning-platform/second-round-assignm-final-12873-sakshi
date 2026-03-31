@@ -6,22 +6,27 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    // 🔐 FIX: move secret to config
     @Value("${jwt.secret}")
     private String secret;
 
-    // 🔐 FIX: configurable expiration
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+
+        if (keyBytes.length < 32) {
+            throw new RuntimeException("JWT secret key must be at least 32 characters long");
+        }
+
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     // ✅ GENERATE TOKEN
@@ -36,7 +41,11 @@ public class JwtUtil {
 
     // ✅ EXTRACT USERNAME
     public String extractUsername(String token) {
-        return getClaims(token).getSubject();
+        try {
+            return getClaims(token).getSubject();
+        } catch (Exception e) {
+            return null; // 🔥 Prevent crash
+        }
     }
 
     // ✅ EXTRACT CLAIMS
@@ -50,7 +59,13 @@ public class JwtUtil {
 
     // ✅ VALIDATE TOKEN
     public boolean validateToken(String token, String username) {
-        return username.equals(extractUsername(token)) && !isTokenExpired(token);
+        try {
+            return username != null &&
+                    username.equals(extractUsername(token)) &&
+                    !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // ⏰ CHECK EXPIRY

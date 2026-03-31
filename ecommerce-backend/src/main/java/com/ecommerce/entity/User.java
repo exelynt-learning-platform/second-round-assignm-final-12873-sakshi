@@ -1,6 +1,7 @@
 package com.ecommerce.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 
 @Entity
 @Table(name = "users")
@@ -10,25 +11,36 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    // ✅ USERNAME
+    @NotBlank(message = "Username is required")
+    @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false)
+    // ✅ PASSWORD
+    @NotBlank(message = "Password is required")
+    @Size(max = 128, message = "Password too long")
+    @Column(nullable = false, length = 128)
     private String password;
 
+    // ✅ ROLE
+    @NotBlank(message = "Role is required")
     @Column(nullable = false)
     private String role;
 
+    // ✅ WALLET AMOUNT
     @Column(nullable = false)
     private double amount = 0.0;
 
-    // ✅ GETTERS & SETTERS
+    // ✅ DEFAULT CONSTRUCTOR (IMPORTANT)
+    public User() {}
+
+    // ===== GETTERS & SETTERS =====
 
     public Long getId() {
         return id;
     }
 
-    // 🔥 VERY IMPORTANT (TEST FIX)
+    // 🔥 REQUIRED (tests + JPA)
     public void setId(Long id) {
         this.id = id;
     }

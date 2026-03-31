@@ -10,11 +10,13 @@ public class ProductRequest {
     @NotBlank(message = "Description is required")
     private String description;
 
-    @Min(value = 1, message = "Price must be greater than 0")
-    private double price;
+    @NotNull(message = "Price is required")
+    @DecimalMin(value = "0.01", message = "Price must be greater than 0")
+    private Double price;
 
+    @NotNull(message = "Stock is required")
     @Min(value = 0, message = "Stock cannot be negative")
-    private int stockQuantity;
+    private Integer stockQuantity;
 
     @NotBlank(message = "Image URL is required")
     private String imageUrl;
@@ -26,11 +28,11 @@ public class ProductRequest {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
-    public double getPrice() { return price; }
-    public void setPrice(double price) { this.price = price; }
+    public Double getPrice() { return price; }
+    public void setPrice(Double price) { this.price = price; }
 
-    public int getStockQuantity() { return stockQuantity; }
-    public void setStockQuantity(int stockQuantity) { this.stockQuantity = stockQuantity; }
+    public Integer getStockQuantity() { return stockQuantity; }
+    public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }

@@ -14,13 +14,31 @@ public class AuthController {
         this.service = service;
     }
 
+    // 🔥 REGISTER
     @PostMapping("/register")
-    public User register(@RequestBody User user) {
-        return service.register(user);
+    public String register(@RequestBody User user) {
+
+        if (user == null || user.getUsername() == null || user.getUsername().isBlank()) {
+            throw new IllegalArgumentException("Username is required");
+        }
+
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+
+        service.register(user);
+
+        return "User registered successfully";
     }
 
+    // 🔥 LOGIN
     @PostMapping("/login")
     public String login(@RequestBody User user) {
+
+        if (user == null || user.getUsername() == null || user.getPassword() == null) {
+            throw new IllegalArgumentException("Invalid login request");
+        }
+
         return service.login(user.getUsername(), user.getPassword());
     }
 }

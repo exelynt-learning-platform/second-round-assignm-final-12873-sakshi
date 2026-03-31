@@ -28,13 +28,17 @@ public class CartService {
     // 🔥 ADD TO CART
     public Cart addToCart(String username, Long productId, int quantity) {
 
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
         User user = userRepo.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 🔥 ✅ STOCK VALIDATION (REVIEW FIX)
+        // ✅ STOCK VALIDATION
         if (product.getStockQuantity() < quantity) {
             throw new RuntimeException("Insufficient stock");
         }
@@ -46,7 +50,6 @@ public class CartService {
 
             int newQuantity = cartItem.getQuantity() + quantity;
 
-            // 🔥 ✅ CHECK AGAIN (important for existing cart)
             if (product.getStockQuantity() < newQuantity) {
                 throw new RuntimeException("Insufficient stock");
             }
@@ -71,18 +74,26 @@ public class CartService {
 
     // 🔥 REMOVE ITEM
     public void removeItem(Long cartId) {
-        cartRepo.deleteById(cartId);
+
+        Cart cart = cartRepo.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+
+        cartRepo.delete(cart);
     }
 
     // 🔥 UPDATE QUANTITY
     public Cart updateQuantity(Long cartId, int quantity) {
 
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than 0");
+        }
+
         Cart cart = cartRepo.findById(cartId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
+        // ✅ FIXED HERE
         Product product = cart.getProduct();
 
-        // 🔥 ✅ STOCK VALIDATION HERE ALSO
         if (product.getStockQuantity() < quantity) {
             throw new RuntimeException("Insufficient stock");
         }

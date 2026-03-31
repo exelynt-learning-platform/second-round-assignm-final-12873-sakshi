@@ -2,11 +2,9 @@ package com.ecommerce.service;
 
 import com.ecommerce.entity.*;
 import com.ecommerce.repository.*;
-import com.ecommerce.entity.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
 
 @Service
 public class OrderService {
@@ -14,17 +12,24 @@ public class OrderService {
     private final OrderRepository orderRepo;
     private final CartRepository cartRepo;
     private final UserRepository userRepo;
+    private final ProductRepository productRepo;
 
     public OrderService(OrderRepository orderRepo,
                         CartRepository cartRepo,
-                        UserRepository userRepo) {
+                        UserRepository userRepo,
+                        ProductRepository productRepo) {
         this.orderRepo = orderRepo;
         this.cartRepo = cartRepo;
         this.userRepo = userRepo;
+        this.productRepo = productRepo;
     }
 
     // 🔥 CREATE ORDER FROM CART
     public Order createOrder(String username, String address) {
+
+        if (address == null || address.isBlank()) {
+            throw new IllegalArgumentException("Address cannot be empty");
+        }
 
         // ✅ USER VALIDATION
         User user = userRepo.findByUsername(username)
@@ -39,9 +44,16 @@ public class OrderService {
 
         double total = 0;
 
+        // ✅ CREATE ORDER FIRST (needed for mapping)
+        Order order = new Order();
+        order.setUser(user);
+        order.setAddress(address);
+        order.setPaymentStatus("PENDING");
+
         // ✅ CONVERT CART → ORDER ITEMS
         List<OrderItem> items = cartItems.stream().map(c -> {
 
+            // ✅ FIXED HERE
             Product product = c.getProduct();
 
             if (product == null) {
@@ -62,22 +74,27 @@ public class OrderService {
             item.setProduct(product);
             item.setQuantity(c.getQuantity());
 
+            // 🔥 IMPORTANT FIX
+            item.setOrder(order);
+
             return item;
 
         }).toList();
 
-        // ✅ TOTAL CALCULATION
+        // ✅ TOTAL + STOCK REDUCTION
         for (OrderItem item : items) {
-            total += item.getProduct().getPrice() * item.getQuantity();
+            Product p = item.getProduct();
+
+            total += p.getPrice() * item.getQuantity();
+
+            p.setStockQuantity(p.getStockQuantity() - item.getQuantity());
+
+            // 🔥 SAVE STOCK UPDATE
+            productRepo.save(p);
         }
 
-        // ✅ CREATE ORDER
-        Order order = new Order();
-        order.setUser(user);
-        order.setItems(items);   // 🔥 IMPORTANT CHANGE
+        order.setItems(items);
         order.setTotalPrice(total);
-        order.setAddress(address);
-        order.setPaymentStatus("PENDING");
 
         Order savedOrder = orderRepo.save(order);
 
@@ -96,7 +113,7 @@ public class OrderService {
         return orderRepo.findByUser(user);
     }
 
-    // 🔥 PAYMENT STATUS UPDATE (OPTIONAL API)
+    // 🔥 PAYMENT STATUS UPDATE
     public Order makePayment(Long orderId, boolean success) {
 
         Order order = orderRepo.findById(orderId)
