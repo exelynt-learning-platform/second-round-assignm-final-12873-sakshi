@@ -24,21 +24,34 @@ public class PaymentService {
 
     public String processPayment(Long orderId) {
 
+        // ✅ Order fetch
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        // ✅ Already paid
         if ("SUCCESS".equals(order.getPaymentStatus())) {
             throw new RuntimeException("Payment already completed");
         }
 
+        // ✅ Validate items
         if (order.getItems() == null || order.getItems().isEmpty()) {
             throw new RuntimeException("Order has no items");
         }
 
+        // ✅ Validate user
         User user = order.getUser();
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
 
         double total = order.getTotalPrice();
 
+        // ✅ Validate total
+        if (total <= 0) {
+            throw new RuntimeException("Invalid order amount");
+        }
+
+        // ❌ Insufficient balance
         if (user.getAmount() < total) {
             order.setPaymentStatus("FAILED");
             orderRepo.save(order);
@@ -49,17 +62,18 @@ public class PaymentService {
         user.setAmount(user.getAmount() - total);
         userRepo.save(user);
 
-        // ✅ DO NOT REDUCE STOCK AGAIN (already done in OrderService)
-
+        // ✅ Mark success
         order.setPaymentStatus("SUCCESS");
         orderRepo.save(order);
 
+        // 🛒 Clear cart
         cartRepo.deleteByUser(user);
 
         return "SUCCESS";
     }
 
     public void markFailed(Long orderId) {
+
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
