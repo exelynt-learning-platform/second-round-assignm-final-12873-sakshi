@@ -1,6 +1,7 @@
 package com.ecommerce.controller;
 
 import com.ecommerce.entity.Order;
+import com.ecommerce.entity.OrderItem;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.User;
 import com.ecommerce.repository.CartRepository;
@@ -40,8 +41,9 @@ public class PaymentController {
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        if (order.getProducts() == null || order.getProducts().isEmpty()) {
-            throw new RuntimeException("Order has no products");
+        // 🔥 FIX: items instead of products
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            throw new RuntimeException("Order has no items");
         }
 
         if (!"PENDING".equals(order.getPaymentStatus())) {
@@ -69,8 +71,9 @@ public class PaymentController {
             throw new RuntimeException("Payment already completed");
         }
 
-        if (order.getProducts() == null || order.getProducts().isEmpty()) {
-            throw new RuntimeException("Order has no products");
+        // 🔥 FIX: items check
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            throw new RuntimeException("Order has no items");
         }
 
         User user = userRepo.findById(order.getUser().getId())
@@ -90,19 +93,24 @@ public class PaymentController {
             return response;
         }
 
-        // 📦 STOCK VALIDATION + REDUCTION
-        for (Product product : order.getProducts()) {
+        // 📦 STOCK VALIDATION + REDUCTION (FINAL FIX)
+        for (OrderItem item : order.getItems()) {
+
+            Product product = item.getProduct();
 
             if (product == null) {
                 throw new RuntimeException("Invalid product in order");
             }
 
-            if (product.getStockQuantity() <= 0) {
-                throw new RuntimeException(product.getName() + " is out of stock");
+            if (product.getStockQuantity() < item.getQuantity()) {
+                throw new RuntimeException(
+                        "Insufficient stock for " + product.getName());
             }
 
-            // 🔥 NOTE: assumes quantity = 1 (acceptable for assignment)
-            product.setStockQuantity(product.getStockQuantity() - 1);
+            // 🔥 CORRECT STOCK REDUCTION
+            product.setStockQuantity(
+                    product.getStockQuantity() - item.getQuantity()
+            );
         }
 
         // 💰 Deduct balance

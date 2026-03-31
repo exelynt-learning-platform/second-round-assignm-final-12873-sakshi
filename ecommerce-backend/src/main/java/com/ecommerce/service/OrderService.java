@@ -2,9 +2,11 @@ package com.ecommerce.service;
 
 import com.ecommerce.entity.*;
 import com.ecommerce.repository.*;
+import com.ecommerce.entity.Order;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+
 
 @Service
 public class OrderService {
@@ -24,53 +26,62 @@ public class OrderService {
     // 🔥 CREATE ORDER FROM CART
     public Order createOrder(String username, String address) {
 
+        // ✅ USER VALIDATION
         User user = userRepo.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // ✅ CART FETCH
         List<Cart> cartItems = cartRepo.findByUser(user);
 
-        // ✅ FIX: null + empty check
         if (cartItems == null || cartItems.isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
 
         double total = 0;
 
-        // ✅ FIX: stock validation + safe calculation
-        for (Cart c : cartItems) {
-
-            if (c.getProduct() == null) {
-                throw new RuntimeException("Product not found in cart");
-            }
+        // ✅ CONVERT CART → ORDER ITEMS
+        List<OrderItem> items = cartItems.stream().map(c -> {
 
             Product product = c.getProduct();
 
-            // 🔥 IMPORTANT: STOCK VALIDATION (REVIEW REQUIRED)
+            if (product == null) {
+                throw new RuntimeException("Product not found in cart");
+            }
+
+            if (c.getQuantity() <= 0) {
+                throw new RuntimeException("Invalid quantity for product: " + product.getName());
+            }
+
+            // 🔥 STOCK VALIDATION
             if (product.getStockQuantity() < c.getQuantity()) {
                 throw new RuntimeException(
                         "Insufficient stock for product: " + product.getName());
             }
 
-            // ✅ CORRECT TOTAL (already correct but keeping explicit)
-            total += product.getPrice() * c.getQuantity();
+            OrderItem item = new OrderItem();
+            item.setProduct(product);
+            item.setQuantity(c.getQuantity());
+
+            return item;
+
+        }).toList();
+
+        // ✅ TOTAL CALCULATION
+        for (OrderItem item : items) {
+            total += item.getProduct().getPrice() * item.getQuantity();
         }
 
-        // 👉 Extract products
-        List<Product> products = cartItems.stream()
-                .map(Cart::getProduct)
-                .toList();
-
-        // 👉 Create order
+        // ✅ CREATE ORDER
         Order order = new Order();
         order.setUser(user);
-        order.setProducts(products);
+        order.setItems(items);   // 🔥 IMPORTANT CHANGE
         order.setTotalPrice(total);
         order.setAddress(address);
         order.setPaymentStatus("PENDING");
 
         Order savedOrder = orderRepo.save(order);
 
-        // 👉 Clear cart after order
+        // ✅ CLEAR CART
         cartRepo.deleteAll(cartItems);
 
         return savedOrder;
@@ -85,7 +96,7 @@ public class OrderService {
         return orderRepo.findByUser(user);
     }
 
-    // 🔥 PAYMENT
+    // 🔥 PAYMENT STATUS UPDATE (OPTIONAL API)
     public Order makePayment(Long orderId, boolean success) {
 
         Order order = orderRepo.findById(orderId)
