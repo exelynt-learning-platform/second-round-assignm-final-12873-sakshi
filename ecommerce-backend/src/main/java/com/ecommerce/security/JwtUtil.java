@@ -1,8 +1,9 @@
 package com.ecommerce.security;
 
-import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -11,11 +12,16 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    private final String SECRET = "ecommerce_super_secret_key_1234567890_secure";
+    // 🔐 FIX: move secret to config
+    @Value("${jwt.secret}")
+    private String secret;
 
-    // 🔐 generate secure key
+    // 🔐 FIX: configurable expiration
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     // ✅ GENERATE TOKEN
@@ -23,8 +29,8 @@ public class JwtUtil {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 hour
-                .signWith(getSigningKey()) // ✅ NEW METHOD
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(getSigningKey())
                 .compact();
     }
 
@@ -33,10 +39,10 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    // ✅ EXTRACT CLAIMS (helper)
+    // ✅ EXTRACT CLAIMS
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey()) // ✅ NEW METHOD
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -44,8 +50,7 @@ public class JwtUtil {
 
     // ✅ VALIDATE TOKEN
     public boolean validateToken(String token, String username) {
-        String extractedUsername = extractUsername(token);
-        return (extractedUsername.equals(username) && !isTokenExpired(token));
+        return username.equals(extractUsername(token)) && !isTokenExpired(token);
     }
 
     // ⏰ CHECK EXPIRY

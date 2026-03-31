@@ -7,62 +7,56 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.*;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-class OrderServiceTest {
-
-    @Mock
-    private OrderRepository orderRepo;
+class CartServiceTest {
 
     @Mock
     private CartRepository cartRepo;
 
     @Mock
+    private ProductRepository productRepo;
+
+    @Mock
     private UserRepository userRepo;
 
     @InjectMocks
-    private OrderService orderService;
+    private CartService cartService;
 
-    public OrderServiceTest() {
+    public CartServiceTest() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void testCreateOrder() {
+    void testAddToCart() {
 
-        // 👉 Step 1: Dummy user
+        // 👉 Dummy user
         User user = new User();
         user.setUsername("satish");
 
-        // 👉 Step 2: Dummy product
+        // 👉 Dummy product (🔥 FIXED)
         Product product = new Product();
-        product.setPrice(1000);
+        product.setId(1L);
+        product.setName("Mobile");        // ✅ IMPORTANT
+        product.setPrice(2000);
+        product.setStockQuantity(10);     // ✅ MUST > 0
 
-        // 👉 Step 3: Cart item
-        Cart cart = new Cart();
-        cart.setUser(user);
-        cart.setProduct(product);
-        cart.setQuantity(2);
-
-        List<Cart> cartList = List.of(cart);
-
-        // 👉 Step 4: Mock DB calls
+        // 👉 Mock DB
         when(userRepo.findByUsername("satish")).thenReturn(Optional.of(user));
-        when(cartRepo.findByUser(user)).thenReturn(cartList);
+        when(productRepo.findById(1L)).thenReturn(Optional.of(product));
+        when(cartRepo.findByUserAndProduct(user, product)).thenReturn(Optional.empty());
 
-        Order savedOrder = new Order();
-        when(orderRepo.save(any(Order.class))).thenReturn(savedOrder);
+        Cart savedCart = new Cart();
+        when(cartRepo.save(any(Cart.class))).thenReturn(savedCart);
 
-        // 👉 Step 5: Call method
-        Order result = orderService.createOrder("satish", "Pune");
+        // 👉 Call method
+        Cart result = cartService.addToCart("satish", 1L, 2);
 
-        // 👉 Step 6: Verify
+        // 👉 Verify
         assertNotNull(result);
-
-        verify(orderRepo).save(any(Order.class));
-        verify(cartRepo).deleteAll(cartList);
+        verify(cartRepo).save(any(Cart.class));
     }
 }

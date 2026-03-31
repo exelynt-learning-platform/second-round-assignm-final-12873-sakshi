@@ -34,15 +34,26 @@ public class CartService {
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // 👉 Check if already exists
+        // 🔥 ✅ STOCK VALIDATION (REVIEW FIX)
+        if (product.getStockQuantity() < quantity) {
+            throw new RuntimeException("Insufficient stock");
+        }
+
         Cart cartItem = cartRepo.findByUserAndProduct(user, product)
                 .orElse(null);
 
         if (cartItem != null) {
-            // 👉 Increase quantity
-            cartItem.setQuantity(cartItem.getQuantity() + quantity);
+
+            int newQuantity = cartItem.getQuantity() + quantity;
+
+            // 🔥 ✅ CHECK AGAIN (important for existing cart)
+            if (product.getStockQuantity() < newQuantity) {
+                throw new RuntimeException("Insufficient stock");
+            }
+
+            cartItem.setQuantity(newQuantity);
+
         } else {
-            // 👉 Create new
             cartItem = new Cart(user, product, quantity);
         }
 
@@ -68,6 +79,13 @@ public class CartService {
 
         Cart cart = cartRepo.findById(cartId)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
+
+        Product product = cart.getProduct();
+
+        // 🔥 ✅ STOCK VALIDATION HERE ALSO
+        if (product.getStockQuantity() < quantity) {
+            throw new RuntimeException("Insufficient stock");
+        }
 
         cart.setQuantity(quantity);
         return cartRepo.save(cart);

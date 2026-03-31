@@ -1,4 +1,4 @@
-package com.ecommerce.expection;
+package com.ecommerce.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
 

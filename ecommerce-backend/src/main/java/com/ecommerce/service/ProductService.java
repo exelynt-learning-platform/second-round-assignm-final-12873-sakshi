@@ -34,7 +34,9 @@ public class ProductService {
                 saved.getId(),
                 saved.getName(),
                 saved.getDescription(),
-                saved.getPrice()
+                saved.getPrice(),
+                saved.getStockQuantity(),   // ✅ FIX
+                saved.getImageUrl()         // ✅ FIX
         );
     }
 
@@ -46,7 +48,9 @@ public class ProductService {
                         p.getId(),
                         p.getName(),
                         p.getDescription(),
-                        p.getPrice()
+                        p.getPrice(),
+                        p.getStockQuantity(),   // ✅ FIX
+                        p.getImageUrl()         // ✅ FIX
                 ))
                 .collect(Collectors.toList());
     }
@@ -60,7 +64,9 @@ public class ProductService {
                 p.getId(),
                 p.getName(),
                 p.getDescription(),
-                p.getPrice()
+                p.getPrice(),
+                p.getStockQuantity(),   // ✅ FIX
+                p.getImageUrl()         // ✅ FIX
         );
     }
 
@@ -82,7 +88,9 @@ public class ProductService {
                 updated.getId(),
                 updated.getName(),
                 updated.getDescription(),
-                updated.getPrice()
+                updated.getPrice(),
+                updated.getStockQuantity(),   // ✅ FIX
+                updated.getImageUrl()         // ✅ FIX
         );
     }
 
