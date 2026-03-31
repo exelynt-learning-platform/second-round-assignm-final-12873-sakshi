@@ -41,7 +41,7 @@ public class PaymentController {
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // 🔥 FIX: items instead of products
+        // ✅ SAFE NULL CHECK
         if (order.getItems() == null || order.getItems().isEmpty()) {
             throw new RuntimeException("Order has no items");
         }
@@ -67,11 +67,11 @@ public class PaymentController {
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        // ✅ DOUBLE PAYMENT PREVENTION
         if ("SUCCESS".equals(order.getPaymentStatus())) {
             throw new RuntimeException("Payment already completed");
         }
 
-        // 🔥 FIX: items check
         if (order.getItems() == null || order.getItems().isEmpty()) {
             throw new RuntimeException("Order has no items");
         }
@@ -93,7 +93,7 @@ public class PaymentController {
             return response;
         }
 
-        // 📦 STOCK VALIDATION + REDUCTION (FINAL FIX)
+        // 📦 STOCK VALIDATION + REDUCTION
         for (OrderItem item : order.getItems()) {
 
             Product product = item.getProduct();
@@ -102,14 +102,20 @@ public class PaymentController {
                 throw new RuntimeException("Invalid product in order");
             }
 
-            if (product.getStockQuantity() < item.getQuantity()) {
+            int quantity = item.getQuantity();
+
+            if (quantity <= 0) {
+                throw new RuntimeException("Invalid quantity for " + product.getName());
+            }
+
+            if (product.getStockQuantity() < quantity) {
                 throw new RuntimeException(
                         "Insufficient stock for " + product.getName());
             }
 
-            // 🔥 CORRECT STOCK REDUCTION
+            // ✅ FINAL FIX (correct deduction)
             product.setStockQuantity(
-                    product.getStockQuantity() - item.getQuantity()
+                    product.getStockQuantity() - quantity
             );
         }
 
